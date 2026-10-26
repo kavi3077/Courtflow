@@ -1,0 +1,11 @@
+import admin from './routes/admin.js';import judges from './routes/judges.js';
+import express from 'express'; import cors from 'cors'; import helmet from 'helmet'; import morgan from 'morgan';
+import { config } from './config.js'; import auth from './routes/auth.js'; import dashboard from './routes/dashboard.js'; import cases from './routes/cases.js'; import hearings from './routes/hearings.js'; import advocates from './routes/advocates.js'; import judgments from './routes/judgments.js'; import evidence from './routes/evidence.js'; import { errorHandler, notFound } from './middleware/error.js';
+export const app=express();
+app.disable('x-powered-by');
+app.use(helmet({crossOriginResourcePolicy:{policy:'cross-origin'}}));
+app.use(cors({origin(origin,cb){if(!origin||config.corsOrigins.includes(origin))return cb(null,true);cb(new Error('Origin not allowed by CORS'));},credentials:true}));
+app.use(express.json({limit:'1mb'})); app.use(express.urlencoded({extended:true,limit:'1mb'})); app.use(morgan('combined'));
+app.get('/api/health',(_req,res)=>res.json({status:'ok',service:'courtflow-api',time:new Date().toISOString()}));
+app.use('/api/auth',auth); app.use('/api/dashboard',dashboard); app.use('/api/cases',cases); app.use('/api/hearings',hearings); app.use('/api/advocates',advocates); app.use('/api/judgments',judgments); app.use('/api/evidence',evidence);
+app.use('/api/admin',admin);app.use('/api/judges',judges);app.use(notFound); app.use(errorHandler);

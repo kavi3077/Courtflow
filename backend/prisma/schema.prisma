@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum CaseStatus {
+  PENDING
+  SCHEDULED
+  ACTIVE
+  ADJOURNED
+  CLOSED
+  DISPOSED
+}
+
+enum CasePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum HearingStatus {
+  SCHEDULED
+  COMPLETED
+  ADJOURNED
+  CANCELLED
+}
+
+model User {
+  role         String            @default("STAFF")
+  active       Boolean           @default(true)
+  judges       Judge[]
+  id           String            @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  email        String            @unique
+  passwordHash String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  cases        Case[]
+  advocates    Advocate[]
+  statusEvents CaseStatusEvent[]
+}
+
+model Case {
+  judgeId         String?           @db.ObjectId
+  judge           Judge?            @relation(fields: [judgeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  caseNumber      String
+  title           String
+  description     String?
+  courtName       String
+  caseType        String
+  filingDate      DateTime
+  nextHearingDate DateTime?
+  status          CaseStatus        @default(PENDING)
+  priority        CasePriority      @default(MEDIUM)
+  plaintiff       String
+  defendant       String
+  notes           String?
+  userId          String            @db.ObjectId
+  user            User              @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  hearings        Hearing[]
+  evidence        Evidence[]
+  judgment        Judgment?
+  advocates       CaseAdvocate[]
+  statusHistory   CaseStatusEvent[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@unique([userId, caseNumber])
+  @@index([userId, status])
+  @@index([userId, nextHearingDate])
+}
+
+model Hearing {
+  id        String        @id @default(auto()) @map("_id") @db.ObjectId
+  caseId    String        @db.ObjectId
+  case      Case          @relation(fields: [caseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  date      DateTime
+  courtroom String?
+  judgeName String?
+  purpose   String
+  status    HearingStatus @default(SCHEDULED)
+  outcome   String?
+  notes     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([caseId, date])
+}
+
+model Advocate {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String         @db.ObjectId
+  user           User           @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  name           String
+  email          String?
+  phone          String?
+  enrollmentNo   String?
+  specialization String?
+  organization   String?
+  cases          CaseAdvocate[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([userId, name])
+}
+
+model CaseAdvocate {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  caseId     String   @db.ObjectId
+  advocateId String   @db.ObjectId
+  role       String   @default("Counsel")
+  case       Case     @relation(fields: [caseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  advocate   Advocate @relation(fields: [advocateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([caseId, advocateId])
+}
+
+model Evidence {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  caseId       String   @db.ObjectId
+  case         Case     @relation(fields: [caseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  title        String
+  description  String?
+  originalName String
+  storedName   String
+  mimeType     String
+  sizeBytes    Int
+  uploadedAt   DateTime @default(now())
+
+  @@index([caseId, uploadedAt])
+}
+
+model Judgment {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  caseId       String   @unique @db.ObjectId
+  case         Case     @relation(fields: [caseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  judgmentDate DateTime
+  result       String
+  summary      String
+  judgeName    String?
+  referenceNo  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model CaseStatusEvent {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  caseId      String      @db.ObjectId
+  case        Case        @relation(fields: [caseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  changedById String      @db.ObjectId
+  changedBy   User        @relation(fields: [changedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  fromStatus  CaseStatus?
+  toStatus    CaseStatus
+  note        String?
+  createdAt   DateTime    @default(now())
+
+  @@index([caseId, createdAt])
+}
+
+model Judge {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  name        String
+  courtName   String
+  designation String?
+  cases       Case[]
+  createdAt   DateTime @default(now())
+
+  @@index([userId, name])
+}
+
+model Invitation {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  email     String    @unique
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}

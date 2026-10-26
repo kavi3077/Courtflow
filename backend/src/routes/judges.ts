@@ -1,0 +1,6 @@
+import {Router} from 'express';import {z} from 'zod';import {prisma} from '../lib/prisma.js';import {requireAuth} from '../middleware/auth.js';import {asyncHandler,AppError} from '../utils/http.js';
+const router=Router();router.use(requireAuth);const schema=z.object({name:z.string().min(2).max(120),courtName:z.string().min(2).max(150),designation:z.string().max(120).optional()});
+router.get('/',asyncHandler(async(req,res)=>res.json(await prisma.judge.findMany({where:{userId:req.user!.id},orderBy:{name:'asc'}}))));
+router.post('/',asyncHandler(async(req,res)=>res.status(201).json(await prisma.judge.create({data:{...schema.parse(req.body),userId:req.user!.id}}))));
+router.put('/:id',asyncHandler(async(req,res)=>{const j=await prisma.judge.findFirst({where:{id:String(req.params.id),userId:req.user!.id}});if(!j)throw new AppError(404,'Judge not found');res.json(await prisma.judge.update({where:{id:j.id},data:schema.parse(req.body)}));}));
+router.delete('/:id',asyncHandler(async(req,res)=>{const j=await prisma.judge.findFirst({where:{id:String(req.params.id),userId:req.user!.id}});if(!j)throw new AppError(404,'Judge not found');await prisma.$transaction(async tx=>{await tx.case.updateMany({where:{judgeId:j.id,userId:req.user!.id},data:{judgeId:null}});await tx.judge.delete({where:{id:j.id}})});res.status(204).send();}));export default router;

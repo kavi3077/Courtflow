@@ -1,0 +1,3 @@
+import { bootstrapAdmin } from './bootstrap.js'; import { app } from './app.js'; import { config } from './config.js'; import { prisma } from './lib/prisma.js'; import { connectRedis, redis } from './lib/redis.js';
+async function main(){await prisma.$connect();await bootstrapAdmin();await connectRedis();const server=app.listen(config.port,()=>console.log(`CourtFlow API running on http://localhost:${config.port}`));const shutdown=async()=>{server.close();await prisma.$disconnect();if(redis.isOpen)await redis.quit();process.exit(0)};process.on('SIGTERM',shutdown);process.on('SIGINT',shutdown)}
+main().catch(async e=>{console.error(e);await prisma.$disconnect();process.exit(1)});

@@ -1,0 +1,2 @@
+import {FolderOpen,Plus} from 'lucide-react'; import {Link} from 'react-router-dom';
+export function EmptyState({title='No cases yet',description='Your account is ready. Register the first case to start building your court workflow.'}:{title?:string;description?:string}){return <div className="empty"><div className="empty-icon"><FolderOpen size={28}/></div><h3>{title}</h3><p>{description}</p><Link className="btn primary" to="/cases/new"><Plus size={16}/> Register first case</Link></div>}
